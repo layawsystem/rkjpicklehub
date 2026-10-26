@@ -1248,7 +1248,11 @@ async function slotLockId(date,court,slot){return (date+"_"+court+"_"+slot).repl
    otherwise writes them + the reserved booking docs. This guarantees 0% double-booking. */
 async function reserveSlots(){
 const byDate={};[...cart].forEach(k=>{const[date,court,slot]=k.split("|");((byDate[date]=byDate[date]||{})[court]=byDate[date][court]||[]).push(slot)})
-;const bid=await nextBookingId();reservedBookingId=bid;reservedIds=[];reservedLockIds=[]
+/* LAYAW-RKJ CHECKOUT FIXES */
+/* A hold is not a booking. This id only has to be unique enough to find our
+   own reserved docs and locks again; the real, sequential booking number is
+   allocated at submit so an abandoned checkout does not consume one. */
+;const bid="HOLD-"+Date.now().toString(36).toUpperCase()+"-"+Math.random().toString(36).slice(2,8).toUpperCase();reservedBookingId=bid;reservedIds=[];reservedLockIds=[]
 ;const holdMs=6e4*holdMins(),nowMs=Date.now()
 ;const lockKeys=[];for(const date of Object.keys(byDate))for(const court of Object.keys(byDate[date]))for(const slot of byDate[date][court])lockKeys.push({id:await slotLockId(date,court,slot),date:date,court:court,slot:slot})
 ;await db.runTransaction(async tx=>{
@@ -1366,14 +1370,18 @@ if(!$("dobInput").value)return void toast("Please enter your date of birth.")
    doc — which is what triggers the notification emails. No re-check needed. */
 if(!reservedIds.length||!reservedBookingId){n.disabled=!1,n.textContent="Submit Booking";return toast("Your hold expired. Please pick your slots again.")}
 const a={};[...cart].forEach(e=>{const[t,o,n]=e.split("|");((a[t]=a[t]||{})[o]=a[t][o]||[]).push(n)})
-;const r=reservedBookingId,i=db.batch(),s={};let l=0
+;const hold=reservedBookingId,i=db.batch(),s={};let l=0
 ;Object.keys(a).forEach(e=>{Object.keys(a[e]).forEach(t=>{const o=a[e][t].reduce((s,sl)=>s+slotCost(hm2min(sl),t),0)
 ;s[e+"|"+t]=o,l+=o})});const c=appliedPromo&&computePromoDiscount(appliedPromo).discount||0,d=c>0&&l>0?(l-c)/l:1
 /* Re-read our own reserved docs so we can update them by court/date with the right amount. */
-;const rsnap=await db.collection("bookings").where("bookingId","==",r).get()
+;const rsnap=await db.collection("bookings").where("bookingId","==",hold).get()
 ;if(rsnap.empty){n.disabled=!1,n.textContent="Submit Booking";return toast("Your hold expired. Please pick your slots again.")}
+/* Only now, with the form valid and the hold still alive, does the sequence
+   move. Everything downstream keys off r: the contact doc, the receipt, the
+   success screen and the status link. */
+;const r=await nextBookingId()
 ;rsnap.forEach(doc=>{const t=doc.data();const amt=Math.round((s[t.date+"|"+t.court]||0)*d)
-;i.update(doc.ref,{amount:amt,paymentMethod:chosenPayment||"",status:"pending",holdUntil:firebase.firestore.FieldValue.delete()})})
+;i.update(doc.ref,{bookingId:r,amount:amt,paymentMethod:chosenPayment||"",status:"pending",holdUntil:firebase.firestore.FieldValue.delete()})})
 ;reservedLockIds.forEach(id=>i.delete(db.collection("slotLocks").doc(id)))
 ;;if(agreementRequired&&agreementHash){
 i.set(db.collection("participants").doc(r),{bookingId:r,name:e,email:o,contact:t,
@@ -1385,18 +1393,31 @@ acceptedAt:firebase.firestore.FieldValue.serverTimestamp()})
 ;i.set(db.collection("participantSignatures").doc(agreementHash),{
 agreementVersion:AGREEMENT&&AGREEMENT.version||"",lastBookingId:r,
 signedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:!0})}
-;if(i.set(db.collection("bookingContacts").doc(r),{
+;i.set(db.collection("bookingContacts").doc(r),{
 bookingId:r,bookerName:e,contact:t,email:o,promoCode:appliedPromo?String(appliedPromo.code||""):"",discount:c,
-createdAt:firebase.firestore.FieldValue.serverTimestamp()}),await i.commit(),reservedIds=[],reservedLockIds=[],reservedBookingId=null,receiptData)try{
-await db.collection("receipts").doc(r).set({bookingId:r,image:receiptData,
-createdAt:firebase.firestore.FieldValue.serverTimestamp()})}catch(e){console.warn("receipt save failed",e)}
-if(appliedPromo&&appliedPromo.id)try{await db.collection("promos").doc(appliedPromo.id).update({
-usageCount:firebase.firestore.FieldValue.increment(1)})}catch(e){console.warn("promo usage:",e)}
-saveBooker(e,t,o),
+createdAt:firebase.firestore.FieldValue.serverTimestamp()})
+;await i.commit()
+;reservedIds=[],reservedLockIds=[],reservedBookingId=null
+/* The commit above is the booking. bookingContacts is what fires the emails,
+   so by this line the player is booked and the owner has been told. The
+   receipt is a base64 JPEG inside a Firestore document — on mobile data that
+   write alone took about ten seconds, and the player spent all of it looking
+   at "Submitting…". It is written after the screen flips instead.
+
+   Both values are captured first: the success block clears appliedPromo, and
+   "Book another" clears receiptData, either of which could land before these
+   resolve. A failure here was already non-fatal and still is. */
+;const receiptSnapshot=receiptData,promoUsed=appliedPromo&&appliedPromo.id?appliedPromo.id:null
+;saveBooker(e,t,o),
 $("checkoutView").style.display="none",$("successView").style.display="block",clearHoldTimer(),cart.clear(),
 appliedPromo=null,$("voucherInput")&&($("voucherInput").value=""),setVoucherMsg("",!0),$("successId").textContent=r,
 $("viewStatusBtn").onclick=()=>{window.location.href="status.html?id="+encodeURIComponent(r)},window.scrollTo({top:0,
-behavior:"smooth"})}catch(e){console.error(e),toast("Something went wrong. Please try again."),n.disabled=!1,
+behavior:"smooth"})
+;if(receiptSnapshot)db.collection("receipts").doc(r).set({bookingId:r,image:receiptSnapshot,
+createdAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(e=>console.warn("receipt save failed",e))
+;if(promoUsed)db.collection("promos").doc(promoUsed).update({
+usageCount:firebase.firestore.FieldValue.increment(1)}).catch(e=>console.warn("promo usage:",e))
+}catch(e){console.error(e),toast("Something went wrong. Please try again."),n.disabled=!1,
 n.textContent="Submit Booking"}},$("anotherBtn").onclick=()=>{clearHoldTimer(),reservedIds=[],reservedLockIds=[],reservedBookingId=null,cart.clear(),chosenPayment=null,
 receiptData=null,appliedPromo=null,$("voucherInput")&&($("voucherInput").value=""),setVoucherMsg("",!0),
 $("nameInput").value="",$("contactInput").value="",$("emailInput").value="",$("receiptPreview").style.display="none",
