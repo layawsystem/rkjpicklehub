@@ -1,0 +1,8 @@
+# PRE-LAUNCH — the venue is not live yet.
+# ON GO-LIVE DAY: replace the two lines below with
+#   User-agent: *
+#   Disallow: /admin/
+#   Disallow: /owner/
+# and delete the noindex meta tag at the top of index.html.
+User-agent: *
+Disallow: /

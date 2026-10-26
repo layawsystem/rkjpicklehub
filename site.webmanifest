@@ -1,0 +1,14 @@
+{
+  "name": "RKJ Pickle HUB",
+  "short_name": "RKJ Pickle HUB",
+  "description": "Book a court at RKJ Pickle HUB — Bacolod City.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070708",
+  "theme_color": "#070708",
+  "icons": [
+    { "src": "/assets/favicon-32.png",      "sizes": "32x32",   "type": "image/png" },
+    { "src": "/assets/apple-touch-icon.png","sizes": "180x180", "type": "image/png" },
+    { "src": "/assets/icon-512.png",        "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
