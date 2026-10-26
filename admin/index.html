@@ -479,7 +479,7 @@ table.slots td.cell,table.sched td.cell{border-bottom:1px solid rgba(255,255,255
 @media (min-height:820px){.overlay.show{place-items:center}}
 .modal{max-height:none;margin:auto 0;overscroll-behavior:contain}
 @supports (height:100dvh){.modal{max-height:calc(100dvh - 32px)}}
-.modal *{overscroll-behavior:contain}
+.modal *{overscroll-behavior-x:contain}
 body.layaw-modal-open{overflow:hidden;position:relative}
 /* Flex children default to min-width:auto, so the Start/End date row refused
    to shrink and the End date input sat ~67px past the modal's right edge on a
