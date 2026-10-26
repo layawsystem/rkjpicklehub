@@ -1380,8 +1380,17 @@ const a={};[...cart].forEach(e=>{const[t,o,n]=e.split("|");((a[t]=a[t]||{})[o]=a
    move. Everything downstream keys off r: the contact doc, the receipt, the
    success screen and the status link. */
 ;const r=await nextBookingId()
+/* LAYAW-RKJ HOLD REPLACED NOT RELABELLED */
+/* firestore.rules pins bookingId across the reserved->pending update, so the
+   hold's id cannot be relabelled in place — that denial is what produced
+   "Something went wrong". Delete the hold and create the pending booking in
+   the same batch instead: both are moves the rules already allow, it is
+   atomic, so the slot is never unheld, and the ruleset needs no change. */
 ;rsnap.forEach(doc=>{const t=doc.data();const amt=Math.round((s[t.date+"|"+t.court]||0)*d)
-;i.update(doc.ref,{bookingId:r,amount:amt,paymentMethod:chosenPayment||"",status:"pending",holdUntil:firebase.firestore.FieldValue.delete()})})
+;i.delete(doc.ref)
+;i.set(db.collection("bookings").doc(),{bookingId:r,date:t.date,court:t.court,slots:t.slots,
+startTime:t.startTime,endTime:t.endTime,amount:amt,paymentMethod:chosenPayment||"",status:"pending",
+createdAt:firebase.firestore.FieldValue.serverTimestamp()})})
 ;reservedLockIds.forEach(id=>i.delete(db.collection("slotLocks").doc(id)))
 ;;if(agreementRequired&&agreementHash){
 i.set(db.collection("participants").doc(r),{bookingId:r,name:e,email:o,contact:t,
