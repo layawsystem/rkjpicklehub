@@ -1183,14 +1183,40 @@ const e=$("sumList"),t=$("sumEmpty");e.innerHTML="";let o=0;if(0===cart.size)t.s
 t.style.display="none";const n=Number(SETTINGS.slotMinutes??60),a={};[...cart].forEach(e=>{const[t,o,n]=e.split("|")
 ;(a[t]=a[t]||[]).push({date:t,court:o,hhmm:n,key:e})}),Object.keys(a).sort().forEach(t=>{
 const r=document.createElement("div");r.className="sum-date",r.textContent=niceDateShort(t),e.appendChild(r),
-a[t].sort((e,t)=>e.court.localeCompare(t.court)||hm2min(e.hhmm)-hm2min(t.hhmm)).forEach(t=>{
-const a=hm2min(t.hhmm),r=slotCost(a,t.court);o+=r;const i=document.createElement("div");i.className="sum-item"
+/* LAYAW-RKJ SUMMARY RUNS */
+/* Consecutive slots on the same court collapse into a single line: three
+   one-hour slots on Court 1 from 7PM read as "Court 1  7PM-10PM" instead of
+   three rows. A three-hour booking on two courts was filling the panel with
+   six near-identical lines, which stops reading as a summary.
+
+   Runs are built per court over time-sorted slots; any gap starts a new run.
+   The price is the sum of each slot's own slotCost, never one slot's cost
+   times the count — a rate band can change partway through a run. The X
+   removes every slot in the run; a single hour in the middle is still
+   removable by tapping its cell in the grid.
+
+   This sits inside a comma sequence (…,e.appendChild(r),<here>), so it has to
+   stay an EXPRESSION. An IIFE keeps it one, and gives the run-building loop
+   somewhere to declare its own locals. A leading ";" here is a syntax error. */
+(()=>{const slots=a[t].slice().sort((x,y)=>x.court.localeCompare(y.court)||hm2min(x.hhmm)-hm2min(y.hhmm))
+;const runs=[]
+;slots.forEach(s=>{const st=hm2min(s.hhmm),cost=slotCost(st,s.court),last=runs[runs.length-1]
+;if(last&&last.court===s.court&&last.end===st){last.end=st+n,last.cost+=cost,last.keys.push(s.key)}
+else runs.push({court:s.court,start:st,end:st+n,cost:cost,keys:[s.key]})})
+;runs.forEach(run=>{o+=run.cost
+;const i=document.createElement("div");i.className="sum-item"
 ;const s=document.createElement("div")
-;s.className="meta",s.innerHTML="<span>"+t.court+"</span><span style='color:var(--muted);font-size:12px'>"+slotRangeLabel(a,n)+"</span>"
+;const span=run.end-run.start
+/* On a 24/7 venue a run can wrap the whole day, and hourLabel() then gives the
+   same text at both ends — "12AM-12AM", which reads like a zero-length
+   booking. Only when the two ends collide is the duration spelled out; adding
+   it to every line would be the clutter this change set out to remove. */
+;const rangeLbl=hourLabel(run.start)===hourLabel(run.end)?slotRangeLabel(run.start,span)+" ("+Math.round(span/60)+" hrs)":slotRangeLabel(run.start,span)
+;s.className="meta",s.innerHTML="<span>"+run.court+"</span><span style='color:var(--muted);font-size:12px'>"+rangeLbl+"</span>"
 ;const l=document.createElement("div");l.style.cssText="display:flex;gap:10px;align-items:center"
-;const c=document.createElement("span");c.className="price",c.textContent=peso(r);const d=document.createElement("span")
-;d.className="x",d.textContent="✕",d.onclick=()=>{cart.delete(t.key),afterCartChange()},l.appendChild(c),
-l.appendChild(d),i.appendChild(s),i.appendChild(l),e.appendChild(i)})})}let n=0;if(appliedPromo){
+;const c=document.createElement("span");c.className="price",c.textContent=peso(run.cost);const d=document.createElement("span")
+;d.className="x",d.textContent="✕",d.onclick=()=>{run.keys.forEach(k=>cart.delete(k)),afterCartChange()},l.appendChild(c),
+l.appendChild(d),i.appendChild(s),i.appendChild(l),e.appendChild(i)})})()})}let n=0;if(appliedPromo){
 const e=computePromoDiscount(appliedPromo);e.discount>0?n=e.discount:(appliedPromo=null,
 $("voucherInput").value.trim()&&setVoucherMsg("Voucher no longer applies to your selected slots.",!1))}
 const a=Math.max(0,o-n),r=$("sumOrig");n>0?(r.style.display="block",r.textContent=peso(o),
