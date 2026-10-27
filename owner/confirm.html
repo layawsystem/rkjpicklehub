@@ -369,18 +369,26 @@ table.slots td.cell,table.sched td.cell{border-bottom:1px solid rgba(255,255,255
    SOLID fill in the grid, which is what separates it from four translucent
    neighbours, and Past is grey because it is absent, not a state.
 
-   Open and Pending are the pair most at risk of blurring together, so they
-   sit a hue apart — Open cyan at ~197°, Pending indigo at ~230° — and Booked
-   carries a heavier fill so unavailable reads as closed rather than airy.
+   Open and Pending are blue, a hue apart — Open cyan at ~197°, Pending indigo
+   at ~230°. Booked is deliberately NOT blue: a first pass made it navy and it
+   blended straight into Pending, because two dark blues separated only by hue
+   are not separable at a glance in a dense grid. It is a near-black glass
+   instead, so the grid reads as "blue means you can do something, dark means
+   you cannot".
+
+   Booked still has to be distinct from Past, which is also neutral. It is a
+   neutral GREY rather than a near-black: composited over the page a near-black
+   fill lands at rgb(8,10,15), which is darker than Past's rgb(15,17,22), and a
+   taken slot reading as less present than one that has already gone is the
+   wrong way round. The grey lands at about rgb(26,29,36) — a solid tile that
+   sits above Past, with a stronger rim to match.
 
    The alphas are higher than the stock theme's. At 13% over a near-black page
-   these three are nearly identical in the legend, where the swatch is a bare
-   20px square with no label text inside it to tell them apart. They are set
-   instead so the swatches read as a ladder on their own: Open light, Pending
-   mid, Booked dense. */
+   these are nearly identical in the legend, where the swatch is a bare 20px
+   square with no label text inside it to tell them apart. */
 :root{
   --open-bg:rgba(92,200,255,.22);  --open-tx:#A7E2FF;  --open-bd:rgba(92,200,255,.42);
-  --book-bg:rgba(32,60,122,.55);   --book-tx:#93A9D4;  --book-bd:rgba(60,96,176,.62);
+  --book-bg:rgba(140,150,170,.16); --book-tx:#A3AAB8;  --book-bd:rgba(255,255,255,.18);
   --pend-bg:rgba(70,100,250,.30);  --pend-tx:#B3BEFF;  --pend-bd:rgba(70,100,250,.52);
 }
 
