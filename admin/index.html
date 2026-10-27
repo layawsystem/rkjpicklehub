@@ -599,6 +599,33 @@ input[type=time]::-webkit-calendar-picker-indicator{filter:invert(.75);cursor:po
   --pend-bg:rgba(70,100,250,.30);  --pend-tx:#B3BEFF;  --pend-bd:rgba(70,100,250,.52);
 }
 
+/* ── The owner and admin dashboards use a second set of tokens ──────
+   The booking page talks about availability (Open / Booked / Pending); the
+   dashboards talk about workflow (Pending / Confirmed / Cancelled), and
+   Confirmed is painted from --ok-* and --conf-*, not --book-*. Recolouring
+   only the booking page's tokens left every confirmed row and badge on both
+   dashboards still green.
+
+   Confirmed stays a POSITIVE colour rather than becoming grey like Booked.
+   Grey would have been consistent with the booking page but wrong on a staff
+   tool: confirmed is the success state they are working towards, and it has to
+   be separable from Cancelled, which is already grey. The hue is pulled from
+   the stock green to a deep teal — ~170°, clear of Open at ~197° and Pending
+   at ~230° — so it still reads as "done" without fighting a blue system.
+
+   It cannot simply be another blue: Confirmed and Pending appear side by side
+   in the same list, and two blues a few degrees apart is the mistake that
+   needed undoing on Booked. */
+:root{
+  --ok-bg:rgba(46,170,148,.20);    --ok-tx:#8CE3D0;
+  --conf-bg:rgba(46,170,148,.20);  --conf-tx:#8CE3D0;
+  /* .na falls back to `var(--cancel,#E88A92)` for its text, which is the old
+     pink. Cancelled keeps a warm cast on purpose — it is the one state that
+     should stop the eye — but muted so it sits in the same page. */
+  --cancel:#D99AA6;
+  --cancel-bg:rgba(200,120,135,.16); --cancel-tx:#D99AA6;
+}
+
 /* ── The page itself ───────────────────────────────────────────────
    Near-black with a blue cast rather than #070708's neutral grey, so the
    bloom has something to sit in. The two drifting layers from AMBIENT
