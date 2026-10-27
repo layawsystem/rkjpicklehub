@@ -580,7 +580,7 @@ $("errorBox").textContent=t}function darken(t,e){
 3===(t=String(t).replace("#","")).length&&(t=t.split("").map(t=>t+t).join(""));const n=parseInt(t,16)
 ;return"#"+[Math.round((n>>16&255)*e),Math.round((n>>8&255)*e),Math.round((255&n)*e)].map(t=>("0"+t.toString(16)).slice(-2)).join("")
 }try{const t=firebase.initializeApp(firebaseConfig);try{
-APPCHECK_SITE_KEY&&0!==APPCHECK_SITE_KEY.indexOf("PASTE_")&&firebase.appCheck(t).activate(APPCHECK_SITE_KEY,!0)
+APPCHECK_SITE_KEY&&0!==APPCHECK_SITE_KEY.indexOf("PASTE_")&&firebase.appCheck(t).activate(new firebase.appCheck.ReCaptchaEnterpriseProvider(APPCHECK_SITE_KEY),!0)
 }catch(t){console.warn("AppCheck:",t)}db=firebase.firestore()}catch(t){
 showError("Could not connect. Check the Firebase config.")}async function init(){if(db)if(BID)try{
 const t=await db.collection("settings").doc("config").get();if(t.exists){SETTINGS=t.data()

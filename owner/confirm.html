@@ -595,7 +595,7 @@ function showError(t){$("loading").style.display="none",$("content").style.displ
 // Init Firebase + App Check + persistent auth
 try{
   const app=firebase.initializeApp(firebaseConfig);
-  try{APPCHECK_SITE_KEY&&0!==APPCHECK_SITE_KEY.indexOf("PASTE_")&&firebase.appCheck(app).activate(APPCHECK_SITE_KEY,!0)}catch(e){console.warn("AppCheck:",e)}
+  try{APPCHECK_SITE_KEY&&0!==APPCHECK_SITE_KEY.indexOf("PASTE_")&&firebase.appCheck(app).activate(new firebase.appCheck.ReCaptchaEnterpriseProvider(APPCHECK_SITE_KEY),!0)}catch(e){console.warn("AppCheck:",e)}
   db=firebase.firestore();auth=firebase.auth();
   // Keep the owner signed in on this device across visits.
   auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn("persistence",e));
