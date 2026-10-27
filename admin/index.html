@@ -567,6 +567,30 @@ input[type=time]::-webkit-calendar-picker-indicator{filter:invert(.75);cursor:po
   --glow-panel-rim:var(--glow-rim);
 }
 
+/* ── Slot states, recoloured into the blue family ──────────────────
+   The stock theme paints Open green, Booked pink and Pending gold — three
+   hues that have nothing to do with a black-and-blue brand and read as a
+   different product bolted on. They move into the same family as the rest.
+
+   Selected and Past keep the theme's own treatment: Selected is the one
+   SOLID fill in the grid, which is what separates it from four translucent
+   neighbours, and Past is grey because it is absent, not a state.
+
+   Open and Pending are the pair most at risk of blurring together, so they
+   sit a hue apart — Open cyan at ~197°, Pending indigo at ~230° — and Booked
+   carries a heavier fill so unavailable reads as closed rather than airy.
+
+   The alphas are higher than the stock theme's. At 13% over a near-black page
+   these three are nearly identical in the legend, where the swatch is a bare
+   20px square with no label text inside it to tell them apart. They are set
+   instead so the swatches read as a ladder on their own: Open light, Pending
+   mid, Booked dense. */
+:root{
+  --open-bg:rgba(92,200,255,.22);  --open-tx:#A7E2FF;  --open-bd:rgba(92,200,255,.42);
+  --book-bg:rgba(32,60,122,.55);   --book-tx:#93A9D4;  --book-bd:rgba(60,96,176,.62);
+  --pend-bg:rgba(70,100,250,.30);  --pend-tx:#B3BEFF;  --pend-bd:rgba(70,100,250,.52);
+}
+
 /* ── The page itself ───────────────────────────────────────────────
    Near-black with a blue cast rather than #070708's neutral grey, so the
    bloom has something to sit in. The two drifting layers from AMBIENT

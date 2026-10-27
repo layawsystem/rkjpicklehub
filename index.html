@@ -689,6 +689,30 @@ table.slots .cell-inner.cell-blocked{max-width:120px;overflow:hidden;text-overfl
   --glow-panel-rim:var(--glow-rim);
 }
 
+/* ── Slot states, recoloured into the blue family ──────────────────
+   The stock theme paints Open green, Booked pink and Pending gold — three
+   hues that have nothing to do with a black-and-blue brand and read as a
+   different product bolted on. They move into the same family as the rest.
+
+   Selected and Past keep the theme's own treatment: Selected is the one
+   SOLID fill in the grid, which is what separates it from four translucent
+   neighbours, and Past is grey because it is absent, not a state.
+
+   Open and Pending are the pair most at risk of blurring together, so they
+   sit a hue apart — Open cyan at ~197°, Pending indigo at ~230° — and Booked
+   carries a heavier fill so unavailable reads as closed rather than airy.
+
+   The alphas are higher than the stock theme's. At 13% over a near-black page
+   these three are nearly identical in the legend, where the swatch is a bare
+   20px square with no label text inside it to tell them apart. They are set
+   instead so the swatches read as a ladder on their own: Open light, Pending
+   mid, Booked dense. */
+:root{
+  --open-bg:rgba(92,200,255,.22);  --open-tx:#A7E2FF;  --open-bd:rgba(92,200,255,.42);
+  --book-bg:rgba(32,60,122,.55);   --book-tx:#93A9D4;  --book-bd:rgba(60,96,176,.62);
+  --pend-bg:rgba(70,100,250,.30);  --pend-tx:#B3BEFF;  --pend-bd:rgba(70,100,250,.52);
+}
+
 /* ── The page itself ───────────────────────────────────────────────
    Near-black with a blue cast rather than #070708's neutral grey, so the
    bloom has something to sit in. The two drifting layers from AMBIENT
@@ -1364,7 +1388,11 @@ if(!$("dobInput").value)return void toast("Please enter your date of birth.")
 ;if(!$("ecNumInput").value.trim())return void toast("Please enter an emergency contact number.")
 ;if(!$("agrAccept").checked)return void toast("Please read and accept the Participant Agreement.")
 ;if(!agreementHash)return void toast("Your browser could not complete this step. Please update it, or use Chrome or Safari.")}
-;const n=$("submitBtn");n.disabled=!0,n.textContent="Submitting…";try{
+;const n=$("submitBtn");n.disabled=!0,n.textContent="Submitting…"
+/* LAYAW-RKJ SEQ ROLLBACK */
+/* Declared outside the try so the catch can hand the number back. */
+;let allocatedSeq=null
+;try{
 /* The slots are already held by our reservation (goCheckout). Finalize it:
    flip each reserved doc to "pending" with its amount, then write the contact
    doc — which is what triggers the notification emails. No re-check needed. */
@@ -1380,6 +1408,7 @@ const a={};[...cart].forEach(e=>{const[t,o,n]=e.split("|");((a[t]=a[t]||{})[o]=a
    move. Everything downstream keys off r: the contact doc, the receipt, the
    success screen and the status link. */
 ;const r=await nextBookingId()
+;allocatedSeq=Number(r.slice(-4))||null
 /* LAYAW-RKJ HOLD REPLACED NOT RELABELLED */
 /* firestore.rules pins bookingId across the reserved->pending update, so the
    hold's id cannot be relabelled in place — that denial is what produced
@@ -1427,7 +1456,14 @@ createdAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(e=>console.war
 ;if(promoUsed)db.collection("promos").doc(promoUsed).update({
 usageCount:firebase.firestore.FieldValue.increment(1)}).catch(e=>console.warn("promo usage:",e))
 }catch(e){console.error(e),toast("Something went wrong. Please try again."),n.disabled=!1,
-n.textContent="Submit Booking"}},$("anotherBtn").onclick=()=>{clearHoldTimer(),reservedIds=[],reservedLockIds=[],reservedBookingId=null,cart.clear(),chosenPayment=null,
+n.textContent="Submit Booking"
+/* Give the number back, but only if it is still the newest one — otherwise
+   another booker has taken one since and stepping the counter down would hand
+   two bookings the same id. Leaving a gap is the safe failure. */
+;if(allocatedSeq)try{await db.runTransaction(async tx=>{const cref=db.collection("meta").doc("counters")
+;const cs=await tx.get(cref);const cur=cs.exists&&cs.data().bookingSeq?cs.data().bookingSeq:0
+;if(cur===allocatedSeq)tx.set(cref,{bookingSeq:allocatedSeq-1},{merge:!0})})}
+catch(err){console.warn("sequence rollback skipped",err)}}},$("anotherBtn").onclick=()=>{clearHoldTimer(),reservedIds=[],reservedLockIds=[],reservedBookingId=null,cart.clear(),chosenPayment=null,
 receiptData=null,appliedPromo=null,$("voucherInput")&&($("voucherInput").value=""),setVoucherMsg("",!0),
 $("nameInput").value="",$("contactInput").value="",$("emailInput").value="",$("receiptPreview").style.display="none",
 $("uploadBox").querySelector(".big").textContent="☁️ Tap to upload image",$("successView").style.display="none",
