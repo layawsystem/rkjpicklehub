@@ -1299,9 +1299,15 @@ const lockRefs=lockKeys.map(k=>db.collection("slotLocks").doc(k.id))
 ;const ref=db.collection("bookings").doc();reservedIds.push(ref.id)
 ;tx.set(ref,{bookingId:bid,date:date,court:court,slots:slots,startTime:slots[0],endTime:slots[slots.length-1],
 status:"reserved",holdUntil:hu,createdAt:firebase.firestore.FieldValue.serverTimestamp()})})})
-})}
+})
+/* LAYAW-RKJ RELOAD-SAFE HOLD */
+/* Survives a reload so the next load can let the slots go. sessionStorage
+   rather than localStorage: a hold belongs to this tab, not to the browser. */
+;try{sessionStorage.setItem("layaw.hold",JSON.stringify({bid:bid,lockIds:reservedLockIds.slice()}))}catch(e){}
+}
 /* Release the current reservation: delete reserved booking docs AND their slot locks. */
 async function releaseReservation(){const bid=reservedBookingId,lockIds=reservedLockIds.slice()
+;try{sessionStorage.removeItem("layaw.hold")}catch(e){}
 ;releasingBookingId=bid;reservedIds=[];reservedLockIds=[];reservedBookingId=null
 ;try{const b=db.batch();let any=!1
 /* Delete by querying our own reserved docs (robust even if in-memory IDs were lost). */
@@ -1444,6 +1450,7 @@ bookingId:r,bookerName:e,contact:t,email:o,promoCode:appliedPromo?String(applied
 createdAt:firebase.firestore.FieldValue.serverTimestamp()})
 ;await i.commit()
 ;reservedIds=[],reservedLockIds=[],reservedBookingId=null
+;try{sessionStorage.removeItem("layaw.hold")}catch(e){}
 /* The commit above is the booking. bookingContacts is what fires the emails,
    so by this line the player is booked and the owner has been told. The
    receipt is a base64 JPEG inside a Firestore document — on mobile data that
@@ -1478,7 +1485,27 @@ $("uploadBox").querySelector(".big").textContent="☁️ Tap to upload image",$(
 $("app").style.display="block",window.innerWidth<=1e3&&($("mobileBar").style.display="flex"),renderGrid(),
 updateSummary(),renderCalendar(),window.scrollTo({top:0,behavior:"smooth"})},setInterval(()=>{
 SETTINGS&&COURTS.length&&selectedDate===dstr(today())&&"none"!==$("app").style.display&&renderGrid()},6e4),(function(){var ua=navigator.userAgent||"";var inApp=/FBAN|FBAV|FB_IAB|Instagram|Messenger|Line\/|Twitter|GSA/i.test(ua);window.__inApp=inApp;
-var hintTimer=setTimeout(function(){var h=document.getElementById("loadHint");if(h&&document.getElementById("loading")&&"none"!==document.getElementById("loading").style.display){var m=document.getElementById("loadHintMsg");if(m&&inApp)m.innerHTML="Taking longer than usual. If you opened this from Messenger or Facebook, tap the <strong>•••</strong> menu and choose <strong>“Open in browser”</strong> (Chrome or Safari) for the best experience.";h.style.display="block"}},inApp?800:6e3);var rb=document.getElementById("retryLoad");rb&&(rb.onclick=function(){location.reload()});window.__clearLoadHint=function(){clearTimeout(hintTimer)}})(),loadData()</script> <!-- ══════════════════ LAYAW MOTION v2 · markup + behaviour ══════════════════ -->
+var hintTimer=setTimeout(function(){var h=document.getElementById("loadHint");if(h&&document.getElementById("loading")&&"none"!==document.getElementById("loading").style.display){var m=document.getElementById("loadHintMsg");if(m&&inApp)m.innerHTML="Taking longer than usual. If you opened this from Messenger or Facebook, tap the <strong>•••</strong> menu and choose <strong>“Open in browser”</strong> (Chrome or Safari) for the best experience.";h.style.display="block"}},inApp?800:6e3);var rb=document.getElementById("retryLoad");rb&&(rb.onclick=function(){location.reload()});window.__clearLoadHint=function(){clearTimeout(hintTimer)}})()
+/* A hold recorded by a previous load means that page went away mid-checkout —
+   reloaded, navigated off, or closed. Let the slots go so the booker is not
+   locked out of their own pick. releaseReservation() deletes reserved docs and
+   locks, both of which firestore.rules lets the public delete, so this works
+   with nobody signed in. The live availability listener repaints the grid. */
+,function(){let raw=null;try{raw=sessionStorage.getItem("layaw.hold")}catch(e){}
+if(!raw)return;try{sessionStorage.removeItem("layaw.hold")}catch(e){}
+let h=null;try{h=JSON.parse(raw)}catch(e){}
+if(!h||!h.bid)return
+;reservedBookingId=h.bid,reservedLockIds=Array.isArray(h.lockIds)?h.lockIds:[],reservedIds=[]
+;releaseReservation().catch(function(e){console.warn("stale hold release failed",e)})}()
+/* Ask before a reload throws the selection away. The wording and the buttons
+   are the browser's own — a page cannot supply either for beforeunload, and
+   has not been able to since 2017. Only fires while checkout is open with a
+   live hold, so the booking page itself never nags. */
+,window.addEventListener("beforeunload",function(e){
+if(!reservedBookingId)return
+;const cv=$("checkoutView");if(!cv||"block"!==cv.style.display)return
+;e.preventDefault();e.returnValue=""})
+,loadData()</script> <!-- ══════════════════ LAYAW MOTION v2 · markup + behaviour ══════════════════ -->
 <div class="rs-seal" id="rsSeal" aria-hidden="true">
 <div class="rs-seal-scrim" id="rsSealScrim"></div>
 <svg class="rs-seal-mark" id="rsSealMark" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
