@@ -1571,7 +1571,7 @@ t=(await db.collection("admins").doc(e.uid).get()).exists}catch(e){t=!1}if(t)ret
 $("pwGate").style.display="none",
 $("loginView").style.display="grid",void($("loginErr").textContent="This is a staff account. Please sign in with the owner account.")
 ;let n=!1;if(!("maintenance@layawsystem.com"===(e.email||"").toLowerCase()))try{
-const e=await db.collection("settings").doc("config").get();n=!(e.exists&&!0===e.data().ownerPasswordSet)}catch(e){n=!1}
+const _c=await db.collection("settings").doc("config").get(),_u=_c.exists?_c.data().ownerPasswordSetUids:null;n=!(Array.isArray(_u)&&_u.includes(e.uid))}catch(e){n=!1}
 if(n)return $("loginView").style.display="none",$("dashView").style.display="none",$("newPw").value="",
 $("newPw2").value="",$("pwErr").textContent="",void($("pwGate").style.display="grid")
 ;$("loginView").style.display="none",$("pwGate").style.display="none",$("dashView").style.display="block",
@@ -1590,7 +1590,7 @@ $("signoutBtn").onclick=()=>auth.signOut(),$("pwSaveBtn").onclick=async()=>{cons
 ;if(e!==t)return void($("pwErr").textContent="Passwords do not match.");const n=auth.currentUser
 ;if(!n)return void($("pwErr").textContent="Session expired. Please sign in again.");const a=$("pwSaveBtn")
 ;a.disabled=!0,a.textContent="Saving…";try{await n.updatePassword(e),await db.collection("settings").doc("config").set({
-ownerPasswordSet:!0},{merge:!0}),$("pwGate").style.display="none",$("dashView").style.display="block",startDashboard()
+ownerPasswordSet:!0,ownerPasswordSetUids:firebase.firestore.FieldValue.arrayUnion(n.uid)},{merge:!0}),$("pwGate").style.display="none",$("dashView").style.display="block",startDashboard()
 }catch(e){const t={"auth/weak-password":"Password is too weak. Please use at least 8 characters.",
 "auth/requires-recent-login":"For security, please sign out and sign in again, then set your password."}
 ;$("pwErr").textContent=t[e.code]||"Could not update password: "+(e.message||e.code||"")}finally{a.disabled=!1,
